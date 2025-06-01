@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Document</title>
+    <style>
+      h1,
+      h4 {
+        text-align: center;
+      }
+      .wrapper {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .wrapper > div {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+      .responseBox {
+        white-space: pre-wrap;
+        background-color: grey;
+        margin-top: 15px;
+        width: 400px;
+        min-height: 100px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>You can test the routes here easily</h1>
+    <h4>
+      You can use the buttons below to send requests to the API endpoints
+      directly from this page.
+    </h4>
+    <div class="wrapper">
+      <div>
+        <h1>get Notes</h1>
+        <button onclick="fetchItems()">Show notes</button>
+        <p id="responseBox" class="responseBox"></p>
+      </div>
+
+      <div>
+        <h1>Search Note</h1>
+
+        <label for="nameInput">Name:</label>
+        <input type="text" id="nameInput" placeholder="Enter name" />
+
+        <label for="descriptionInput">Description:</label>
+        <input
+          type="text"
+          id="descriptionInput"
+          placeholder="Enter description"
+        />
+
+        <button onclick="fetchItem()">Search</button>
+
+        <p id="responseBoxGetNote" class="responseBox"></p>
+      </div>
+
+      <div>
+        <h1>Add Note</h1>
+
+        <label for="addNameInput">Name:</label>
+        <input type="text" id="addNameInput" placeholder="Enter name" />
+
+        <label for="addDescriptionInput">Description:</label>
+        <input
+          type="text"
+          id="addDescriptionInput"
+          placeholder="Enter description"
+        />
+
+        <button onclick="addItem()">Add Note</button>
+
+        <p id="responseBoxAddNote" class="responseBox"></p>
+      </div>
+      <div>
+        <h1>Delete Note</h1>
+
+        <label for="removeIdInput"
+          >Enter the Note id to remove it: Example(1)</label
+        >
+        <input
+          type="number"
+          id="removeIdInput"
+          placeholder="Enter ID number"
+          min="1"
+        />
+
+        <button onclick="removeItem()">Remove</button>
+
+        <pre id="responseBoxRemoveItem" class="responseBox"></pre>
+      </div>
+
+      <div>
+        <h1>Update Item</h1>
+
+        <label for="updateIdInput">Item ID:</label>
+        <input
+          type="number"
+          id="updateIdInput"
+          placeholder="Enter item ID"
+          min="1"
+        />
+
+        <label for="updateNameInput">New Name:</label>
+        <input type="text" id="updateNameInput" placeholder="Enter new name" />
+
+        <label for="updateDescriptionInput">New Description:</label>
+        <input
+          type="text"
+          id="updateDescriptionInput"
+          placeholder="Enter new description"
+        />
+
+        <button onclick="updateItem()">Update</button>
+
+        <pre id="responseBoxUpdateItem" class="responseBox"></pre>
+      </div>
+    </div>
+    <script>
+      // NOTE: Browsers don't support importing .ts files directly in HTML files,
+      // so I wrote the functions directly inside the script for easier testing.
+
+      const fetchItems = async () => {
+        try {
+          const response = await fetch("/items");
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+
+          const data = await response.json();
+          document.getElementById("responseBox").textContent = JSON.stringify(
+            data,
+            null,
+            2
+          );
+        } catch (err) {
+          document.getElementById("responseBox").textContent =
+            "Error: " + err.message;
+        }
+      };
+
+      const fetchItem = async () => {
+        const name = document.getElementById("nameInput").value.trim();
+        const description = document
+          .getElementById("descriptionInput")
+          .value.trim();
+
+        const params = new URLSearchParams();
+        if (name) params.append("name", name);
+        if (description) params.append("description", description);
+
+        try {
+          const response = await fetch(`/items/search?${params.toString()}`);
+          if (!response.ok)
+            throw new Error(`HTTP error! Status: ${response.status}`);
+
+          const data = await response.json();
+          document.getElementById("responseBoxGetNote").textContent =
+            JSON.stringify(data, null, 2);
+        } catch (err) {
+          document.getElementById("responseBoxGetNote").textContent =
+            "Error: " + err.message;
+        }
+      };
+
+      const addItem = async () => {
+        const name = document.getElementById("addNameInput").value.trim();
+        const description = document
+          .getElementById("addDescriptionInput")
+          .value.trim();
+
+        if (!name || !description) {
+          document.getElementById("responseBoxAddNote").textContent =
+            "Error: Both name and description are required.";
+          return;
+        }
+
+        try {
+          const response = await fetch("/items", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ name, description }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Failed to add item");
+          }
+
+          const data = await response.json();
+          document.getElementById("responseBoxAddNote").textContent =
+            JSON.stringify(data, null, 2);
+
+          document.getElementById("addNameInput").value = "";
+          document.getElementById("addDescriptionInput").value = "";
+        } catch (err) {
+          document.getElementById("responseBoxAddNote").textContent =
+            "Error: " + err.message;
+        }
+      };
+
+      const removeItem = async () => {
+        const id = document.getElementById("removeIdInput").value.trim();
+
+        if (!id || isNaN(id) || +id < 1) {
+          document.getElementById("responseBoxRemoveItem").textContent =
+            "Please enter a valid ID number";
+          return;
+        }
+
+        try {
+          const response = await fetch(`/items/${id}`, {
+            method: "DELETE",
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Failed to remove item");
+          }
+
+          const data = await response.json();
+          document.getElementById("responseBoxRemoveItem").textContent =
+            JSON.stringify(data, null, 2);
+
+          document.getElementById("removeIdInput").value = "";
+        } catch (err) {
+          document.getElementById("responseBoxRemoveItem").textContent =
+            "Error: " + err.message;
+        }
+      };
+
+      const updateItem = async () => {
+        const id = document.getElementById("updateIdInput").value.trim();
+        const name = document.getElementById("updateNameInput").value.trim();
+        const description = document
+          .getElementById("updateDescriptionInput")
+          .value.trim();
+
+        if (!id || isNaN(id) || +id < 1) {
+          document.getElementById("responseBoxUpdateItem").textContent =
+            "Please enter a valid item ID";
+          return;
+        }
+        if (!name || !description) {
+          document.getElementById("responseBoxUpdateItem").textContent =
+            "Name and description are required";
+          return;
+        }
+
+        try {
+          const response = await fetch(`/items/${id}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ name, description }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Failed to update item");
+          }
+
+          const data = await response.json();
+          document.getElementById("responseBoxUpdateItem").textContent =
+            JSON.stringify(data, null, 2);
+        } catch (err) {
+          document.getElementById("responseBoxUpdateItem").textContent =
+            "Error: " + err.message;
+        }
+      };
+    </script>
+  </body>
+</html>
